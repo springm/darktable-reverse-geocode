@@ -28,12 +28,14 @@ GPLv2
 
 ]]
 
+local MODULE_NAME = "auto_reverse_geocode"
+
 local dt = require "darktable"
 local du = require "lib/dtutils"
 local filelib = require "lib/dtutils.file"
-dt.print_log('loading auto_reverse_geocode')
+dt.print_log('loading auto_reverse_geocode (git)')
 
-du.check_min_api_version("7.0.0", "auto_reverse_geocode") 
+du.check_min_api_version("7.0.0", MODULE_NAME) 
 
 -- return data structure for script_manager
 local script_data = {}
@@ -42,8 +44,18 @@ script_data.destroy = nil -- function to destory the script
 script_data.destroy_method = nil -- set to hide for libs since we can't destroy them commpletely yet, otherwise leave as nil
 script_data.restart = nil -- how to restart the (lib) script after it's been hidden - i.e. make it visible again
 
+local PS = dt.configuration.running_os == "windows" and "\\" or "/"
+local gettext = dt.gettext
+-- Tell gettext where to find the .mo file translating messages for a particular domain
+gettext.bindtextdomain(MODULE_NAME,dt.configuration.config_dir..PS .. "lua" .. PS .. "locale" .. PS)
+
+local function _(msgid)
+    return gettext.dgettext(MODULE_NAME, msgid)
+end
+
 -- run command and retrieve stdout
-local function get_stdout(cmd)
+local function run_command_and_get_stdout(cmd)
+   dt.print_log(cmd)
   -- Open the command, for reading
   local fd = assert(io.popen(cmd, 'r'))
   dt.control.read(fd)
@@ -62,8 +74,15 @@ end
 
 -- Retrieve the location through reverse_nominatim.py
 local function nominatim_location(image)
-   local cmd = "/home/springm/projekte/python/reverse_nominatim7.py "..image.latitude..' '..image.longitude;
-   local location = get_stdout(cmd)
+   local nominatim_script = dt.preferences.read(MODULE_NAME, "reverse_geocode_python_script", "file")
+   if nominatim_script == "" then
+      dt.print_log(_("reverse geocode python script script not configured"))
+      dt.print(_("reverse geocode python script script not configured"))
+      return
+   end
+   -- local cmd = "/home/springm/projekte/python/reverse_nominatim7.py "..image.latitude..' '..image.longitude;
+   local cmd = nominatim_script.." "..image.latitude..' '..image.longitude;
+   local location = run_command_and_get_stdout(cmd)
    dt.print_log(location)
    lines = {}
    for s in location:gmatch("[^\r?\n]+") do
@@ -102,6 +121,7 @@ local function auto_reverse_geocode_one_image(image)
       dt.print_log(image.filename .. ' has no coordinates')
       return 0
    end
+   
    locstring = nominatim_location(image)
    dt.print_log('Locationstring is '..locstring[1])
    local present_image_tags = {}
@@ -142,16 +162,22 @@ local function auto_reverse_geocode_apply(shortcut)
 end
 
 local function destroy()
-  dt.destroy_event("auto_reverse_geocode", "shortcut")
-  dt.destroy_event("auto_reverse_geocode", "post-import-image")
+  dt.destroy_event(MODULE_NAME, "shortcut")
+  dt.destroy_event(MODULE_NAME, "post-import-image")
 end
 
--- Registering event
-dt.register_event("auto_reverse_geocode", "shortcut", auto_reverse_geocode_apply,
+-- ----------------------------------------------- Registering events ---
+dt.register_event(MODULE_NAME, "shortcut", auto_reverse_geocode_apply,
        "Reverse geocode coordinates to get location")
 
-dt.register_event("auto_reverse_geocode", "post-import-image",
+dt.register_event(MODULE_NAME, "post-import-image",
   auto_reverse_geocode_one_image_event)
+
+-- ------------------------------------- register the new preferences ---
+dt.preferences.register(MODULE_NAME, "reverse_geocode_python_script", "file", 
+                        _("auto_reverse_geocode: python script for reverse geocoding"), 
+                        _("select executable python script for reverse geocoding")  , "")
+
 
 script_data.destroy = destroy
 return script_data
