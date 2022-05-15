@@ -80,8 +80,19 @@ local function nominatim_location(image)
       dt.print(_("reverse geocode python script script not configured"))
       return
    end
-   -- local cmd = "/home/springm/projekte/python/reverse_nominatim7.py "..image.latitude..' '..image.longitude;
-   local cmd = nominatim_script.." "..image.latitude..' '..image.longitude;
+   local location_prefix = dt.preferences.read(MODULE_NAME, "reverse_geocode_location_prefix", "string")
+   if location_prefix == "" then
+      dt.print_log(_("reverse geocode location prefix not configured. defaulting to 'where"))
+      dt.print(_("reverse geocode location prefix not configured. defaulting to 'where"))
+      location_prefix = 'where'
+   end
+   local nominatim_language = dt.preferences.read(MODULE_NAME, "reverse_geocode_nominatim_language", "string")
+   if nominatim_language == "" then
+      dt.print_log(_("reverse geocode nominatim language not configured. defaulting to 'en"))
+      dt.print(_("reverse geocode nominatim language not configured. defaulting to 'en"))
+      nominatim_language = 'en'
+   end
+   local cmd = nominatim_script.." --prefix "..location_prefix.." --lang "..nominatim_language.." "..image.latitude..' '..image.longitude;
    local location = run_command_and_get_stdout(cmd)
    dt.print_log(location)
    lines = {}
@@ -154,6 +165,7 @@ local function auto_reverse_geocode_apply(shortcut)
   local images = dt.gui.action_images
   local images_processed = 0
   local images_submitted = 0
+  local startsecs = os.clock()  -- make sure that a 1 second interval is maintained
   for _,image in pairs(images) do
     images_submitted = images_submitted + 1
     images_processed = images_processed + auto_reverse_geocode_one_image(image)
@@ -177,6 +189,14 @@ dt.register_event(MODULE_NAME, "post-import-image",
 dt.preferences.register(MODULE_NAME, "reverse_geocode_python_script", "file", 
                         _("auto_reverse_geocode: python script for reverse geocoding"), 
                         _("select executable python script for reverse geocoding")  , "")
+
+dt.preferences.register(MODULE_NAME, "reverse_geocode_location_prefix", "string", 
+                        _("auto_reverse_geocode: prefix for hierarchical location string"), 
+                        _("Determine the location string prefix. Defaults to 'where'.")  , "")
+
+dt.preferences.register(MODULE_NAME, "reverse_geocode_nominatim_language", "string", 
+                        _("auto_reverse_geocode: language for Nominatim-retrieved adresses"), 
+                        _("Determine the language for the retrieved adresses.")  , "")
 
 
 script_data.destroy = destroy
