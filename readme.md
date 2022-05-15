@@ -23,5 +23,5 @@ It is called with a coordinate pair as arguments and returns a lightroom styled 
 Malpighi, Saragozza-Porto, Bologna, Emilia-Romagna, 40121-40141, Italy'''
 
 ## TODO
-  * Settings dialogue for the lua part
+  * Rate limiting to be implemented 
   * Cleanup of the python script: Move development and test relevant parts into a dedicated module.
