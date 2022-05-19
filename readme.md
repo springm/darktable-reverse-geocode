@@ -2,7 +2,7 @@
 
 ## Preface
 
-I very often track my movements with a GPS logger ,and during rawfile import, I write those coordinates into the raw file by means of exiftool. Now coordinates are nice and allow to see the image location on a map, but I want to see the postal-like address in the metadata of the image.
+I very often track my movements with a GPS logger ,and during rawfile import from card to disk, I write those coordinates into the raw file by means of exiftool. Now coordinates are nice and allow to see the image location on a map, but I want to see the postal-like address in the metadata of the image.
 
 The openstreetmap-Nominatim servers allow reverse geocoding without all the privacy implications of google maps at al., and there is a very nice python module to query nominatim with a pair of coordinates and get back address data.
 
@@ -23,5 +23,5 @@ It is called with a coordinate pair as arguments and returns a lightroom styled 
 Malpighi, Saragozza-Porto, Bologna, Emilia-Romagna, 40121-40141, Italy'''
 
 ## TODO
-  * Settings dialogue for the lua part
+  * Rate limiting to be implemented 
   * Cleanup of the python script: Move development and test relevant parts into a dedicated module.
