@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import datetime
+import time
 import argparse
 import json
 import re
@@ -10,8 +12,28 @@ from collections import namedtuple
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 
+timestampfile = '/tmp/testtimestamp'
+minimum_nominatim_timediff = 1
+
+# ------------------------------------- enforced delay for nominatim ---
+milliseconds_since_last_run = minimum_nominatim_timediff
+
+try:
+    with open(timestampfile) as f:
+        last_execution_time = f.read() #datetime.fromtimestamp(float(f.read()))
+        milliseconds_since_last_run = datetime.datetime.now().timestamp() - float(last_execution_time)
+except FileNotFoundError:  # will happen in the first execution, obviously
+        last_execution_time = now
+time_to_sleep = 0
+if minimum_nominatim_timediff - milliseconds_since_last_run > 0:
+    time_to_sleep = minimum_nominatim_timediff - milliseconds_since_last_run 
+    print(f"Waiting {time_to_sleep} ms", file=sys.stderr)
+time.sleep(time_to_sleep)
+with open(timestampfile, 'w') as f:
+    f.write(str(datetime.datetime.now().timestamp()))
+
+# --------------------------------------- standard nominatim locator ---
 locator = Nominatim(user_agent='darktableReverseGeocoder', timeout=30)
-rgeocode = RateLimiter(locator.reverse, min_delay_seconds=1)
 
 # only for testing. nominatim answers get loaded from locale json file
 def lrgeocode(coordinates, *args,**kwargs):
@@ -68,8 +90,8 @@ def testrun():
     for index, row in df.iterrows():
         if row['Country'] == 'Antarctica':
             continue
-        #    location = rgeocode(f"{row['Latitude']} {row['Longitude']}", language='en')
-        location = lrgeocode(f"{row['Latitude']} {row['Longitude']}", language='en')
+        # location = lrgeocode(f"{row['Latitude']} {row['Longitude']}", language='en')
+        location = locator.reverse(f"{row['Latitude']} {row['Longitude']}", language='en')
         country = location.raw.get('address').get('country')
         print(get_road( location.raw ),end=", ")
         print(get_city( location.raw ),end=", ")
@@ -84,7 +106,7 @@ parser = argparse.ArgumentParser(description='Reverse Geocoder for Nominatim')
 
 parser.add_argument('coords', 
                     nargs='*', 
-                    help='specify 2 or 0 coordinates'
+                    help='specify 2 or 0 (for testing with --test or --italy) coordinates'
 )
 parser.add_argument('--lang', dest='language', type=str, help='Preferred language for address information')
 parser.add_argument('--prefix', dest='locstring_prefix', type=str,
@@ -105,9 +127,9 @@ if args.test:
 else:
     location = {}
     if args.italy:
-         location = rgeocode("41.902784 12.496366", language=args.language)
+         location = locator.reverse("41.902784 12.496366", language=args.language)
     else:
-        location = rgeocode(coords, language=args.language)
+        location = locator.reverse(coords, language=args.language)
     s = f"{args.locstring_prefix}|%s|%s|%s|%s\n%s" % ( location.raw.get('address').get('country'),
                                     get_state( location.raw ),
                                     get_city( location.raw ),
