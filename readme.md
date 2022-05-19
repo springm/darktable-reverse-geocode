@@ -22,6 +22,7 @@ It is called with a coordinate pair as arguments and returns a lightroom styled 
 '''where|Italy|Emilia-Romagna|Bologna|Malpighi
 Malpighi, Saragozza-Porto, Bologna, Emilia-Romagna, 40121-40141, Italy'''
 
+It waits between requests to Nominatim for 1 second.
+
 ## TODO
-  * Rate limiting to be implemented 
   * Cleanup of the python script: Move development and test relevant parts into a dedicated module.
